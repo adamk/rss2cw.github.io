@@ -1,0 +1,92 @@
+
+<html>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+  <script src="javascripts/morse.js"></script>
+  <style type="text/css">
+    pre {
+        white-space: pre-wrap;       /* CSS 3 */
+        white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+        white-space: -pre-wrap;      /* Opera 4-6 */
+        white-space: -o-pre-wrap;    /* Opera 7 */
+        word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    }
+    #feed {
+      width: 75%;
+    }
+    .caret {
+      color: red
+    }
+  </style>
+  <script>
+    var ac;
+    var morse;
+
+    function stripHTML(string) {
+      return string.replace(/(<([^>]+)>)/ig,"");
+    }
+
+    function setCaret(i) {
+      text = $('#content').text()
+      before = text.substr(0,i)
+      caret = text.charAt(i)
+      after = text.substr(i+1,text.length)
+      $('#content').html(before + '<span class="caret">'+caret+'</span>' + after)
+    }
+
+   function stop() {
+	if(morse != undefined) {
+
+		$.each(morse._intervals, function(i, int) {
+		  window.clearInterval(int);
+		})
+        }
+        if(ac != undefined) {
+	  ac.close();
+	}
+    }
+
+    $(function() {
+      $('#stop').click(function() {
+console.log(morse._intervals);
+        stop();
+      });
+      $('#play').click(function() {
+       stop();
+       ac = new (window.AudioContext || window.webkitAudioContext)();
+       rate = $('#character_speed').val()
+       farnsworth = $('#farnsworth').val()
+       morse = new MorseNode(ac, rate, farnsworth);
+       morse.connect(ac.destination);
+        $.ajax({
+          url: 'http://rss2json.com/api.json?rss_url='+$('#feed').val(),
+          jsonp: 'callback',
+          dataType: 'jsonp',
+          success: function(data) {
+            var content = ''
+            $.each(data.items, function() {
+              content += stripHTML(this.title) + "\n\n"
+              content += stripHTML(this.content) + "\n\n\n"
+            });
+            $('#content').html(content);
+            morse.playString(ac.currentTime, $('#content').text())
+          },
+        })
+      })
+    });
+  </script>
+<body>
+  <p>Enter a RSS feed to listen to in CW: <input id="feed" value="http://rss.cnn.com/rss/cnn_world.rss"/>
+</p>
+<p>Character Speed: <input id="character_speed" value="20"></p>
+<p>Farnsworth Speed: <input id="farnsworth" value="20"></p>
+<p>
+  <button id="play">Play</button>
+  <button id="stop">Stop</button>
+</p>
+
+  <h4>Content:</h4>
+  <pre id="content"></pre>
+
+
+</body>
+</html>
